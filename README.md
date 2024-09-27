@@ -1,3 +1,5 @@
+![Example](images/raycast_example.png)
+
 # Raycast Reflection Simulation
 
 This project is an interactive 2D simulation of raycasting with reflection mechanics, built in **Java** using **Swing** for the graphical user interface (GUI). The project is set up using **Maven** and was developed in the **NetBeans IDE**. The rays originate from a movable light source and collide with predefined or user-drawn walls, reflecting off of them. The program allows you to dynamically control the raycasting parameters and draw custom walls to observe how light behaves in such a scenario.
