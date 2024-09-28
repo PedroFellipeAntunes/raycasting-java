@@ -18,14 +18,19 @@ public class ReflectiveRaycasting extends JPanel implements MouseMotionListener,
     private final ArrayList<Line> raycasts;
     private final ArrayList<Point> collisions;
     private final ArrayList<Line> reflections;
+    private final ArrayList<Line> polygon;
     private final Point centro;
     
+    private final int radius = 1000;
     private int numRaycasts = 50;
     private double lightAngle = 360.0;
     private double initialAngle = 0.0;
     
+    private boolean togglePolygon = false;
+    private boolean togglePolygonColor = false;
     private boolean reflect = false;
     private boolean drawingMode = false;
+    
     private Point startPoint;
     private Point currentMousePosition;
 
@@ -39,7 +44,8 @@ public class ReflectiveRaycasting extends JPanel implements MouseMotionListener,
         raycasts = new ArrayList<>();
         collisions = new ArrayList<>();
         reflections = new ArrayList<>();
-
+        polygon = new ArrayList<>();
+        
         generateRaycasts();
         
         addMouseMotionListener(this);
@@ -111,6 +117,19 @@ public class ReflectiveRaycasting extends JPanel implements MouseMotionListener,
                         repaint();
                     }
                 }
+                
+                if (e.getKeyCode() == KeyEvent.VK_H) {
+                    togglePolygon = !togglePolygon;
+                    generateRaycasts();
+                    repaint();
+                }
+                
+                if (e.getKeyCode() == KeyEvent.VK_C) {
+                    if (togglePolygon) {
+                        togglePolygonColor = !togglePolygonColor;
+                        repaint();
+                    }
+                }
             }
         });
         
@@ -155,10 +174,9 @@ public class ReflectiveRaycasting extends JPanel implements MouseMotionListener,
             centro.setX(e.getX());
             centro.setY(e.getY());
             generateRaycasts();
-        } else {
-            currentMousePosition = new Point(e.getX(), e.getY());
         }
         
+        currentMousePosition = new Point(e.getX(), e.getY());
         repaint();
     }
 
@@ -210,27 +228,70 @@ public class ReflectiveRaycasting extends JPanel implements MouseMotionListener,
             }
         }
         
-        for (int i = 0; i < numRaycasts; i++) {
+        if (togglePolygonColor && togglePolygon) {
             g2d.setColor(Color.WHITE);
-            g2d.drawLine(
-                    (int) raycasts.get(i).getP1().getX(),
-                    (int) raycasts.get(i).getP1().getY(),
-                    (int) raycasts.get(i).getP2().getX(),
-                    (int) raycasts.get(i).getP2().getY()
-            );
+            
+            //Just messing around with gradient to fake a light source
+//            if (currentMousePosition != null) {
+//                float cx = (float) currentMousePosition.getX();
+//                float cy = (float) currentMousePosition.getY();
+//                
+//                RadialGradientPaint radialGradient = new RadialGradientPaint(
+//                        cx, cy, radius / 4,
+//                        new float[]{0f, 1f},
+//                        new Color[]{Color.WHITE, Color.BLACK}
+//                );
+//                
+//                g2d.setPaint(radialGradient);
+//            }
+            
+            int num = polygon.size();
+            int[] xp = new int[num], yp = new int[num];
+            
+            for (int i = 0; i < num; i++) {
+                xp[i] = (int) polygon.get(i).getP1().getX();
+                yp[i] = (int) polygon.get(i).getP1().getY();
+            }
+            
+            g2d.fillPolygon(xp, yp, num);
+        } else {
+            g2d.setColor(Color.WHITE);
+            for (int i = 0; i < numRaycasts; i++) {
+                g2d.drawLine(
+                        (int) raycasts.get(i).getP1().getX(),
+                        (int) raycasts.get(i).getP1().getY(),
+                        (int) raycasts.get(i).getP2().getX(),
+                        (int) raycasts.get(i).getP2().getY()
+                );
+            }
+        }
+        
+        if (!togglePolygonColor) {
+            g2d.setColor(Color.WHITE);
+            for (int i = 0; i < polygon.size(); i++) {
+                g2d.drawLine(
+                        (int) polygon.get(i).getP1().getX(),
+                        (int) polygon.get(i).getP1().getY(),
+                        (int) polygon.get(i).getP2().getX(),
+                        (int) polygon.get(i).getP2().getY()
+                );
+            }
         }
 
-        for (Line parede : paredes) {
+        if (!togglePolygon) {
             g2d.setColor(Color.WHITE);
-            if (parede == null) {
-                continue;
+            for (int i = 0; i < paredes.size(); i++) {
+                if (paredes.get(i) == null) {
+                    continue;
+                }
+
+                g2d.drawLine(
+                        (int) paredes.get(i).getP1().getX(),
+                        (int) paredes.get(i).getP1().getY(),
+                        (int) paredes.get(i).getP2().getX(),
+                        (int) paredes.get(i).getP2().getY()
+                );
             }
-            g2d.drawLine(
-                    (int) parede.getP1().getX(),
-                    (int) parede.getP1().getY(),
-                    (int) parede.getP2().getX(),
-                    (int) parede.getP2().getY()
-            );
         }
 
         if (drawingMode && startPoint != null && currentMousePosition != null) {
@@ -272,14 +333,15 @@ public class ReflectiveRaycasting extends JPanel implements MouseMotionListener,
         raycasts.clear();
         collisions.clear();
         reflections.clear();
+        polygon.clear();
         
         double angleStep = lightAngle / numRaycasts;
 
         for (int i = 0; i < numRaycasts; i++) {
             double angle = initialAngle + Math.toRadians(i * angleStep);
 
-            double dx = Math.cos(angle) * 1000;
-            double dy = Math.sin(angle) * 1000;
+            double dx = Math.cos(angle) * radius;
+            double dy = Math.sin(angle) * radius;
 
             Point end = new Point(centro.getX() + dx, centro.getY() + dy);
             raycasts.add(new Line(centro, end));
@@ -302,6 +364,21 @@ public class ReflectiveRaycasting extends JPanel implements MouseMotionListener,
                 collisions.add(null);
                 reflections.add(null);
             }
+        }
+        
+        if (togglePolygon) {
+            generatePolygon();
+        }
+    }
+    
+    private void generatePolygon() {
+        if (numRaycasts >= 1) {
+            for (int i = 0; i < raycasts.size() - 1; i++) {
+                polygon.add(new Line(raycasts.get(i).getP2(), raycasts.get(i + 1).getP2()));
+            }
+            
+            //Conect end with beginning
+            polygon.add(new Line(raycasts.get(raycasts.size() - 1).getP2(), raycasts.get(0).getP2()));
         }
     }
 
